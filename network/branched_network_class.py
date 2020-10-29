@@ -1,6 +1,7 @@
 import h5py 
 import numpy as np
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 import os
 
 class branched_network(object):
@@ -42,8 +43,8 @@ class branched_network(object):
         
         
         # Placeholders for input and output
-        # self.x = tf.placeholder(tf.float32, shape=[None, 
-        #                         self.layer_params_dict['data']['edge']*self.layer_params_dict['data']['edge']])
+        self.x = tf.compat.v1.placeholder(tf.float32, shape=[None, 
+                                self.layer_params_dict['data']['edge']*self.layer_params_dict['data']['edge']])
         
         #Load saved weights and biases- split into three .npy files to upload to github
         weights_biases = np.load(os.getcwd()+ '/network/weights/network_weights_early_layers.npy', allow_pickle=True, encoding='latin1')[()]
@@ -92,7 +93,7 @@ class branched_network(object):
     def get_graph(self):
     
         #Shared layers
-        x_reshape = tf.reshape(shape=[None, self.layer_params_dict['data']['edge']*self.layer_params_dict['data']['edge']], [-1, self.layer_params_dict['data']['edge'], 
+        x_reshape = tf.reshape(self.x, [-1, self.layer_params_dict['data']['edge'], 
                                         self.layer_params_dict['data']['edge'],1])
         h_conv1 = self.conv_layer(x_reshape, self.layer_params_dict['conv1'], self.layer_vars_dict['conv1'])
         h_rnorm1 = self.lrnorm_layer(h_conv1, self.layer_params_dict['rnorm1'])
