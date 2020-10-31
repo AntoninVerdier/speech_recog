@@ -13,6 +13,7 @@ tf.disable_v2_behavior()
 from tensorflow.python.framework import ops
 ops.reset_default_graph()
 
+tf.get_logger().setLevel('WARNING')
 
 # import the following to run demo_from_wav()
 from pycochleagram import cochleagram as cgram 
@@ -39,16 +40,21 @@ def demo_pre_generated_cochleagram():
     word_key = np.load('demo_stim/logits_to_word_key.npy') #Load logits to word key 
     music_key = np.load('demo_stim/logits_to_genre_key.npy') #Load logits to genre key
 
+    word_key = np.array([word.decode('utf-8') for word in word_key])
+    music_key = np.array([music.decode('utf-8') for music in music_key])
+
     # example pre-generated speech cochleagram 
     example_cochleagram = np.load('demo_stim/example_cochleagram_0.npy') 
     plot_cochleagram(example_cochleagram,'Example speech cochleagram' )
+
+    print(example_cochleagram.shape)
 
     # run cochleagram through network and get logits for word branch
     logits = net_object.session.run(net_object.word_logits, feed_dict={net_object.x: example_cochleagram})
 
     # determine word branch prediction 
     prediction = word_key[np.argmax(logits, axis=1)]
-    print ("Speech Example ... actual label: according  predicted_label: " + prediction[0] +'\n')
+    print('Speech Example ... actual label: according  predicted_label: ' + str(prediction[0]) + '\n')
     
     # example pre-generated music cochleagram
     example_cochleagram_music = np.load('demo_stim/example_cochleagram_1.npy') 
@@ -59,8 +65,8 @@ def demo_pre_generated_cochleagram():
                                           feed_dict={net_object.x: example_cochleagram_music})
     # note: throughout paper top-5 accuracy is reported for genre task
     prediction_music = (logits_music).argsort()[:,-5:][0][::-1] 
-    print ("Music Example... actual label: "+ music_key[11]+ "  top-5 predicted_labels (in order of confidence): ")
-    print ("\n"+ "; ".join(music_key[prediction_music]))
+    print ("Music Example... actual label: " + str(music_key[11]) + "  top-5 predicted_labels (in order of confidence): ")
+    print ("\n"+ str(music_key[prediction_music]))
 
 def generate_cochleagram(wav_f, sr, title):
     # define parameters
@@ -107,7 +113,7 @@ def demo_from_wav():
     logits = net_object.session.run(net_object.word_logits, feed_dict={net_object.x: c_gram})
     prediction = word_key[np.argmax(logits, axis=1)]
     print ("Speech Example ... \n clean speech, actual label: Increasingly, predicted_label: " \
-        + prediction[0] +'\n')
+        + str(prediction[0]) +'\n')
     
     ## Music examples 
     
@@ -117,8 +123,9 @@ def demo_from_wav():
     c_gram = generate_cochleagram(wav_f, sr, 'Example 6')
     logits = net_object.session.run(net_object.genre_logits, feed_dict={net_object.x: c_gram})
     prediction = (logits).argsort()[:,-5:][0][::-1] 
+    print(music_key[prediction])
     print ("Music Example ... \n Background: Auditory Scene, snr: -3db, actual label: " \
-        + music_key[1] + ",\n top-5 predicted_labels (in order of confidence): \n " \
-        + ";\n ".join(music_key[prediction]) + "\n")
+        + str(music_key[1]) + ",\n top-5 predicted_labels (in order of confidence): \n " \
+        + "\n ".join(str(music_key[prediction])) + "\n")
 
 demo_pre_generated_cochleagram()

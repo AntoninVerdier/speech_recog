@@ -60,6 +60,7 @@ class branched_network(object):
     
     #Functions for making graph layers 
     def conv_layer(self, previous_h, layer_params, layer_vars):
+        print(layer_vars['W'].shape)
         return tf.nn.relu(tf.nn.conv2d( previous_h, layer_vars['W'], 
                                   strides=[1,layer_params['stride'], layer_params['stride'],1],
                               padding='SAME' ) + layer_vars['b'])
@@ -95,6 +96,7 @@ class branched_network(object):
         #Shared layers
         x_reshape = tf.reshape(self.x, [-1, self.layer_params_dict['data']['edge'], 
                                         self.layer_params_dict['data']['edge'],1])
+        print(self.layer_vars_dict['conv1']['W'].shape)
         h_conv1 = self.conv_layer(x_reshape, self.layer_params_dict['conv1'], self.layer_vars_dict['conv1'])
         h_rnorm1 = self.lrnorm_layer(h_conv1, self.layer_params_dict['rnorm1'])
         h_pool1 = self.pool_layer( h_rnorm1, self.layer_params_dict['pool1'])
@@ -126,3 +128,51 @@ class branched_network(object):
         session = tf.Session()
         session.run(tf.global_variables_initializer())
         return session, y_conv_logits_W, y_conv_logits_G
+
+    def Conv(self, params):
+        return layers.Conv2D(params['filters'], params['kernel_size'], 
+                             params['strides'], padding='SAME', activation='relu')
+
+    def Pooling(self, params):
+        return layers.MaxPooling2D(params['pool_size'], params['strides'], padding='SAME')
+
+    def Norm(self, params):
+        return layers.Lambda(tf.nn.local_response_normalization(depth_radius = layer_params['radius'],
+                                                  bias = self.rnorm_bias,
+                                                  alpha = self.rnorm_alpha,
+                                                  beta = self.rnorm_beta ))
+
+
+    def updated_graph():
+        import keras.layers
+        import keras.models
+
+
+        self.params = {
+        'conv_1': {'filters': 96, 'kernel_size': [9, 9], 'strides': [1, 3, 3, 1]},
+        'conv_2': {'filters': 256, 'kernel_size': [5, 5], 'strides': [1, 2, 2, 1]},
+        'conv_3': {'filters': 512, 'kernel_size': [3, 3], 'strides': [1, 1, 1, 1]},
+
+        'pool_1': {'pool_size': [3, 3], 'strides': [2, 2]},
+        'pool_2': {'pool_size': [3, 3], 'strides': [2, 2]},
+
+        'norm_1': {'radius': 2, 'bias': 1, 'alpha': 1e-3, 'beta': 0.75},
+        'norm_2': {'radius': 2, 'bias': 1, 'alpha': 1e-3, 'beta': 0.75}
+        }
+
+        model = Sequential()
+
+        model.add(Conv(self.params['conv_1']))
+        model.add(Norm(self.params['norm_1']))
+        model.add(Pooling(self.params['pool_1']))
+
+        model.add(Conv(self.params['conv_2']))
+        model.add(Norm(self.params['norm_2']))
+        model.add(Pooling(self.params['pool_2']))
+
+        model.add(Conv(self.params['conv_3']))
+
+        # Speech Branch
+
+        # Genre Branch
+
