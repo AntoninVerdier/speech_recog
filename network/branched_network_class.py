@@ -16,7 +16,7 @@ class branched_network(object):
         self.n_labels_W = 589 ## NOTE: they're 0:587 numerically so 588 labels but add one for the genre label
         self.n_labels_G = 43 ##NOTE: they're 0:41 numerically so 42 labels but add one for the speech label 
         self.n_out_pool5_W = 6 * 6 * 512 ## NOTE: figure out how to determine this algortihmically (potentially run dummy thru?)
-        self.n_out_pool5_G = 6 * 6 * 512
+        self.n_out_pool5_G = 6 * 6 * 512 
         
       
         #Layer Parameters
@@ -141,6 +141,8 @@ class branched_network(object):
                                                   bias = self.rnorm_bias,
                                                   alpha = self.rnorm_alpha,
                                                   beta = self.rnorm_beta ))
+    def Dense(self, params):
+        return layers.Dense(params['n_neurons'])
 
 
     def updated_graph():
@@ -148,7 +150,7 @@ class branched_network(object):
         import keras.models
 
 
-        self.params = {
+        self.common = {
         'conv_1': {'filters': 96, 'kernel_size': [9, 9], 'strides': [1, 3, 3, 1]},
         'conv_2': {'filters': 256, 'kernel_size': [5, 5], 'strides': [1, 2, 2, 1]},
         'conv_3': {'filters': 512, 'kernel_size': [3, 3], 'strides': [1, 1, 1, 1]},
@@ -160,19 +162,32 @@ class branched_network(object):
         'norm_2': {'radius': 2, 'bias': 1, 'alpha': 1e-3, 'beta': 0.75}
         }
 
+        self.speech = {
+        'conv_4': {'filters': 96, 'kernel_size': [9, 9], 'strides': [1, 3, 3, 1]},
+        'conv_5': {'filters': 256, 'kernel_size': [5, 5], 'strides': [1, 2, 2, 1]},
+
+        'pool_3': {'pool_size': [3, 3], 'strides': [2, 2]}, # average pool, careful
+
+        'dense_1': {'n_neurons': 64}
+
+        }
+
         model = Sequential()
 
-        model.add(Conv(self.params['conv_1']))
-        model.add(Norm(self.params['norm_1']))
-        model.add(Pooling(self.params['pool_1']))
+        model.add(Conv(self.common['conv_1']))
+        model.add(Norm(self.common['norm_1']))
+        model.add(Pooling(self.common['pool_1']))
 
-        model.add(Conv(self.params['conv_2']))
-        model.add(Norm(self.params['norm_2']))
-        model.add(Pooling(self.params['pool_2']))
+        model.add(Conv(self.common['conv_2']))
+        model.add(Norm(self.common['norm_2']))
+        model.add(Pooling(self.common['pool_2']))
 
-        model.add(Conv(self.params['conv_3']))
+        model.add(Conv(self.common['conv_3']))
 
         # Speech Branch
+        model.add(Conv(self.speech['conv_4']))
+        model.add(Conv(self.speech['conv_5']))
+        model.add(Dense(self.speech['dense_1']))
 
         # Genre Branch
 
