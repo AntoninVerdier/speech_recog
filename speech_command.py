@@ -141,6 +141,7 @@ def define_model():
 all_samples, labels = load_data()
 model = define_model()
 
+
 all_coch = {}
 for label in labels[:2]:
 	all_coch[label] = {}
@@ -148,6 +149,9 @@ for label in labels[:2]:
 		current_file = all_samples[label][name]
 		c_gram = generate_cochleagram(current_file, 16000, name)
 		all_coch[label][name] = c_gram
+
+
+pickle.load('')
 
 
 # files = [all_samples[label][file] for label in labels for file in all_samples[label]]
@@ -183,3 +187,6 @@ if not os.path.exists('../Output/Cochleograms/'):
 	os.makedirs('../Output/Cochleograms/')
 
 pickle.dump(all_coch, open('../Output/Cochleograms/all_coch.pkl', 'wb'))
+
+
+pickle.load('../Output/Cochleograms/all_coch.pkl')
