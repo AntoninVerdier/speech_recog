@@ -19,9 +19,9 @@ from pycochleagram import cochleagram as cgram
 from timeit import default_timer as timer
 
 def load_data(label='bird'):
-	data_path ='../commands/train/audio/'
-	labels = os.listdir(data_path)
-	labels.remove('_background_noise_') # Remove background noise for now
+	data_path ='Data/train/audio/'
+	labels = os.listdir(data_path)[:2]
+	#labels.remove('_background_noise_') # Remove background noise for now
 	all_samples = {}
 	for label in labels:
 		all_samples[label] = {}
@@ -31,7 +31,7 @@ def load_data(label='bird'):
 			if len(data) < 16000:
 				data = np.append(data, [0]*(16000-len(data)))
 			all_samples[label][name] = data
-
+			
 	return all_samples, labels
 
 def resample(example, new_size):
@@ -48,16 +48,14 @@ def plot_cochleagram(cochleagram, title):
     plt.show()
 
 
-def generate_cochleagram(wav_f, sr, title):
-	# define parameters
-	#wav_f, name, label, sr, return_dict = all_args
+def generate_cochleagram(file, name):
 	n, sampling_rate = 50, 16000
 	low_lim, hi_lim = 20, 8000
 	sample_factor, pad_factor, downsample = 4, 2, 400
 	nonlinearity, fft_mode, ret_mode = 'power', 'auto', 'envs'
 	strict = True
 	# create cochleagram
-	c_gram = cgram.cochleagram(wav_f, sr, n, low_lim, hi_lim,
+	c_gram = cgram.cochleagram(file, sampling_rate, n, low_lim, hi_lim,
 							   sample_factor, pad_factor, downsample,
 							   nonlinearity, fft_mode, ret_mode, strict)
 
@@ -73,8 +71,6 @@ def generate_cochleagram(wav_f, sr, title):
 
 	# prepare to run through netwmap cork -- i.e., flatten it
 	c_gram_flatten = np.reshape(c_gram_reshape_2, (1, 256*256))
-
-	#return_dict[label][title] = c_gram_flatten
 
 	return c_gram_flatten
 
@@ -141,18 +137,26 @@ def define_model():
 all_samples, labels = load_data()
 model = define_model()
 
+all_cochs = pickle.load(open('../Output/Cochleograms/all_coch.pkl', 'rb'))
 
-all_coch = {}
-for label in labels[:2]:
-	all_coch[label] = {}
-	for name in tqdm(all_samples[label]):
-		current_file = all_samples[label][name]
-		c_gram = generate_cochleagram(current_file, 16000, name)
-		all_coch[label][name] = c_gram
+model.compile(loss='categorical_crossentropy',
+              optimizer='adam',
+              metrics=['accuracy'])
+	
+model.fit(X_train, Y_train, 
+          batch_size=32, nb_epoch=10, verbose=1)
 
+model.evaluate(X_test, y_test, verbose=0)
 
-pickle.load('')
+# all_coch = {}
+# for label in labels:
+# 	all_coch[label] = {}
+# 	for name in tqdm(all_samples[label]):
+# 		current_file = all_samples[label][name]
+# 		c_gram = generate_cochleagram(current_file, name)
+# 		all_coch[label][name] = c_gram
 
+# print(all_coch)
 
 # files = [all_samples[label][file] for label in labels for file in all_samples[label]]
 # names = [file for label in labels for file in all_samples[label]]
@@ -178,15 +182,30 @@ pickle.load('')
 # def log_result(retval):
 #     print('Done')
 
-# pool = Pool(processes=4)
-# pool.map_async(generate_cochleagram, all_args, callback=log_result)
-# pool.close()
-# pool.join()
+# print(os.cpu_count())
+# result_list = []
+# def log_result(result):
+#     # This is called whenever foo_pool(i) returns a result.
+#     # result_list is modified only by the main process, not the pool workers.
+#     result_list.append(result)
 
-if not os.path.exists('../Output/Cochleograms/'):
-	os.makedirs('../Output/Cochleograms/')
+# def apply_async_with_callback():
+#     pool = Pool()
+#     for file, name, label in zip(files, names, labels):
+#         results = pool.apply_async(generate_cochleagram, args=(file, name, label, all_coch))
+#     pool.close()
+#     pool.join()
+#     print(results)
 
-pickle.dump(all_coch, open('../Output/Cochleograms/all_coch.pkl', 'wb'))
+# if __name__ == '__main__':
+#     apply_async_with_callback()
 
 
-pickle.load('../Output/Cochleograms/all_coch.pkl')
+
+# if not os.path.exists('../Output/Cochleograms/'):
+# 	os.makedirs('../Output/Cochleograms/')
+
+# pickle.dump(all_coch, open('../Output/Cochleograms/all_coch.pkl', 'wb'))
+
+
+pickle.load(open('../Output/Cochleograms/all_coch.pkl', 'rb'))
