@@ -1,4 +1,5 @@
 import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import pickle
 import numpy as np
 import tensorflow as tf
@@ -14,12 +15,14 @@ from scipy.io import wavfile
 from multiprocessing import Process, Pool
 import matplotlib.pyplot as plt
 from pycochleagram import cochleagram as cgram
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
 
 # Performance optimization
 from timeit import default_timer as timer
 
 def load_data(label='bird'):
-	data_path ='Data/train/audio/'
+	data_path ='../Data/train/audio/'
 	labels = os.listdir(data_path)[:2]
 	#labels.remove('_background_noise_') # Remove background noise for now
 	all_samples = {}
@@ -31,7 +34,7 @@ def load_data(label='bird'):
 			if len(data) < 16000:
 				data = np.append(data, [0]*(16000-len(data)))
 			all_samples[label][name] = data
-			
+
 	return all_samples, labels
 
 def resample(example, new_size):
@@ -116,8 +119,7 @@ def define_model():
 	}
 
 	model = keras.Sequential()
-
-	model.add(Conv(common['conv_1']))
+	model.add(layers.Conv2D(96, [9, 9], [3, 3], padding='SAME', activation='relu', input_shape=(256, 256, 1)))
 	#model.add(Norm(common['norm_1']))
 	model.add(Pooling(common['pool_1']))
 
@@ -130,23 +132,61 @@ def define_model():
 	# Speech Branch
 	model.add(Conv(speech['conv_4']))
 	model.add(Conv(speech['conv_5']))
+	model.add(layers.Flatten())
 	model.add(Dense(speech['dense_1']))
+	model.add(layers.Dense(1, activation='sigmoid'))
 
 	return model
 
-all_samples, labels = load_data()
-model = define_model()
+#all_samples, labels = load_data()
+
 
 all_cochs = pickle.load(open('../Output/Cochleograms/all_coch.pkl', 'rb'))
 
-model.compile(loss='categorical_crossentropy',
+# Unpack data
+X, y = [], []
+for label in all_cochs:
+	for file in all_cochs[label]:
+		X.append(all_cochs[label][file].reshape(256, 256, 1))
+		y.append(label)
+
+# Shape must be (n_images, x, y, n_channels) to enter conv2d
+X, y = np.array(X), np.array(y)
+
+# Convert categorical to numerical encoding
+encoder = LabelEncoder()
+y = encoder.fit_transform(y)
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=10298)
+
+model = models.Sequential([
+
+layers.Conv2D(96, [9, 9], [3, 3], padding='SAME', activation='relu',
+						input_shape=(256, 256, 1)),
+layers.Lambda(tf.nn.lrn(depth_radius=2, bias=1, alpha=1e-3, beta=0.75)),
+layers.MaxPooling2D([3, 3], [2, 2], padding='SAME'),
+
+layers.Conv2D(256, [5, 5], [2, 2], padding='SAME', activation='relu'),
+layers.Lambda(tf.nn.lrn(depth_radius=2, bias=1, alpha=1e-3, beta=0.75)),
+layers.MaxPooling2D([3, 3], [2, 2], padding='SAME'),
+
+layers.Conv2D(512, [3, 3], [1, 1], padding='SAME', activation='relu'),
+layers.Conv2D(96, [9, 9], [3, 3], padding='SAME', activation='relu'),
+layers.Conv2D(256, [5, 5], [2, 2], padding='SAME', activation='relu'),
+layers.Flatten(),
+layers.Dense(64, activation='softmax'),
+layers.Dense(1, activation='softmax')])
+
+
+
+
+model.compile(loss='binary_crossentropy',
               optimizer='adam',
               metrics=['accuracy'])
-	
-model.fit(X_train, Y_train, 
-          batch_size=32, nb_epoch=10, verbose=1)
 
-model.evaluate(X_test, y_test, verbose=0)
+model.fit(X_train, y_train, batch_size=2, epochs=5)
+
+test_loss, test_acc = model.evaluate(X_test, y_test, verbose=0)
 
 # all_coch = {}
 # for label in labels:
@@ -207,5 +247,5 @@ model.evaluate(X_test, y_test, verbose=0)
 
 # pickle.dump(all_coch, open('../Output/Cochleograms/all_coch.pkl', 'wb'))
 
-
+# Store raw labels list also
 pickle.load(open('../Output/Cochleograms/all_coch.pkl', 'rb'))
