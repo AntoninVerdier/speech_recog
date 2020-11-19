@@ -157,6 +157,7 @@ X, y = np.array(X), np.array(y)
 encoder = LabelEncoder()
 y = encoder.fit_transform(y)
 
+# You can do validation split inside the model.fit function, use validation_split arg
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=10298)
 
 model = models.Sequential([
