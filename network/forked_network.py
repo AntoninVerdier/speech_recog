@@ -52,4 +52,4 @@ model.compile(loss='categorical_crossentropy',
 1. They train the entire network with mixed input and let every sample alter both weights (unlikely)
 2. They trained both branches before and after optimized the shared one after
 3. They found a way to unactivate weight training for one type of input (unlikely given tensorflow 1 pipeline)
-Go through methods
+Go through methods"""
