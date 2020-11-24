@@ -17,12 +17,13 @@ import matplotlib.pyplot as plt
 from pycochleagram import cochleagram as cgram
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
+from network import forked_network as f
 
 # Performance optimization
 from timeit import default_timer as timer
 
 def load_data(label='bird'):
-	data_path ='../Data/train/audio/'
+	data_path ='Data/train/audio/'
 	labels = os.listdir(data_path)[:2]
 	#labels.remove('_background_noise_') # Remove background noise for now
 	all_samples = {}
@@ -160,34 +161,39 @@ y = encoder.fit_transform(y)
 # You can do validation split inside the model.fit function, use validation_split arg
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=10298)
 
-model = models.Sequential([
+# model = models.Sequential([
 
-layers.Conv2D(96, [9, 9], [3, 3], padding='SAME', activation='relu',
-						input_shape=(256, 256, 1)),
-layers.Lambda(tf.nn.lrn(depth_radius=2, bias=1, alpha=1e-3, beta=0.75)),
-layers.MaxPooling2D([3, 3], [2, 2], padding='SAME'),
+# layers.Conv2D(96, [9, 9], [3, 3], padding='SAME', activation='relu',
+# 						input_shape=(256, 256, 1)),
+# layers.Lambda(tf.nn.lrn(depth_radius=2, bias=1, alpha=1e-3, beta=0.75)),
+# layers.MaxPooling2D([3, 3], [2, 2], padding='SAME'),
 
-layers.Conv2D(256, [5, 5], [2, 2], padding='SAME', activation='relu'),
-layers.Lambda(tf.nn.lrn(depth_radius=2, bias=1, alpha=1e-3, beta=0.75)),
-layers.MaxPooling2D([3, 3], [2, 2], padding='SAME'),
+# layers.Conv2D(256, [5, 5], [2, 2], padding='SAME', activation='relu'),
+# layers.Lambda(tf.nn.lrn(depth_radius=2, bias=1, alpha=1e-3, beta=0.75)),
+# layers.MaxPooling2D([3, 3], [2, 2], padding='SAME'),
 
-layers.Conv2D(512, [3, 3], [1, 1], padding='SAME', activation='relu'),
-layers.Conv2D(96, [9, 9], [3, 3], padding='SAME', activation='relu'),
-layers.Conv2D(256, [5, 5], [2, 2], padding='SAME', activation='relu'),
-layers.Flatten(),
-layers.Dense(64, activation='softmax'),
-layers.Dense(1, activation='softmax')])
+# layers.Conv2D(512, [3, 3], [1, 1], padding='SAME', activation='relu'),
+# layers.Conv2D(96, [9, 9], [3, 3], padding='SAME', activation='relu'),
+# layers.Conv2D(256, [5, 5], [2, 2], padding='SAME', activation='relu'),
+# layers.Flatten(),
+# layers.Dense(64, activation='softmax'),
+# layers.Dense(1, activation='softmax')])
+model = f.get_model()
 
+keras.utils.plot_model(model, 'kell_prototype.png', show_shapes=True)
 
+losses = {
+	'speech': 'binary_crossentropy',
+	'genre': 'binary_crossentropy'
+}
 
+model.compile(loss=losses,
+			  optimizer=keras.optimizers.SGD(learning_rate=0.01),
+			  metrics=['accuracy'])
 
-model.compile(loss='binary_crossentropy',
-              optimizer='adam',
-              metrics=['accuracy'])
+model.fit(X_train, y_train)
 
-model.fit(X_train, y_train, batch_size=2, epochs=5)
-
-test_loss, test_acc = model.evaluate(X_test, y_test, verbose=0)
+# test_loss, test_acc = model.evaluate(X_test, y_test, verbose=0)
 
 # all_coch = {}
 # for label in labels:
