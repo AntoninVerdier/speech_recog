@@ -112,17 +112,25 @@ batch_size = 4
 train_dataset = tf.data.Dataset.from_tensor_slices((X_train, y_train))
 train_dataset = train_dataset.shuffle(buffer_size=1024).batch(batch_size)
 
+# Model instances
+speech_model = keras.Model(inputs=base.input,outputs=speech(base(base.input)), name='speech_model')
+genre_model = keras.Model(inputs=base.input,outputs=genre(base(base.input)), name='genre_model')
+
 n_epochs = 10
 switch = True
 for epoch in range(n_epochs):
 	print("\nStart of epoch %d" % (epoch,))
 	for step, (x_batch_train, y_batch_train) in enumerate(train_dataset):
+		
 		if switch == True:
-			switch==True
-		if switch:
-			current_model = keras.Model(inputs=base.input,outputs=speech(base(base.input)))
+			switch = False
 		else:
-			current_model = keras.Model(inputs=base.input,outputs=genre(base(base.input)))
+			switch = True
+		
+		if switch:
+			current_model = speech_model
+		else:
+			current_model = genre_model
 		
 		with tf.GradientTape() as tape:
 			logits = current_model(x_batch_train, training=True)  # Logits for this minibatch
@@ -130,6 +138,8 @@ for epoch in range(n_epochs):
 
 			grads = tape.gradient(loss_value, current_model.trainable_weights)
 			optimizer.apply_gradients(zip(grads, current_model.trainable_weights))
+			
+		
 
 		# Log every 200 batches.
 		if not step % 10:

@@ -3,11 +3,11 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
-from tensorflow.keras.layers import Conv2D, Lambda, MaxPooling2D, Flatten, Dense, Dropout
+from tensorflow.keras.layers import Conv2D, Lambda, MaxPooling2D, Flatten, Dense, Dropout, Reshape
 
 
 n_words = 2
-n_genres = 41
+n_genres = 2
 
 def base_model():
 	inputs = keras.Input(shape=(256, 256, 1))
@@ -53,7 +53,7 @@ def genre_branch():
 	g = MaxPooling2D([3, 3], [2, 2], padding='SAME')(g)
 	g = Flatten()(g)
 	g = Dropout(0.2)(g)
-	genre = Dense(n_genres, activation='softmax', name='genre')(g)
+	genre = Dense(1, activation='softmax', name='genre')(g)
 
 	model = keras.Model(inputs=inputs, outputs=genre, name='genre')
 
